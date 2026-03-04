@@ -1,0 +1,93 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+    postgres:
+        image: postgres:15-alpine
+        container_name: blog_postgres
+        environment:
+            POSTGRES_USER: blog_user
+            POSTGRES_PASSWORD: blog_pass
+            POSTGRES_DB: blog_db
+        ports:
+            - "5432:5432"
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U blog_user -d blog_db"]
+            interval: 2s
+            timeout: 2s
+            retries: 20
+            start_period: 5s
+        networks:
+            - blog_network
+
+    redis:
+        image: redis:7-alpine
+        container_name: blog_redis
+        ports:
+            - "6379:6379"
+        volumes:
+            - redis_data:/data
+        command: redis-server --appendonly yes
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 2s
+            timeout: 2s
+            retries: 20
+            start_period: 5s
+        networks:
+            - blog_network
+
+    init-db:
+        build: .
+        container_name: blog_init
+        environment:
+            PYTHONPATH: /app
+            POSTGRES_HOST: postgres
+            POSTGRES_USER: blog_user
+            POSTGRES_PASSWORD: blog_pass
+            POSTGRES_DB: blog_db
+        volumes:
+            - ./:/app
+        depends_on:
+            postgres:
+                condition: service_healthy
+        networks:
+            - blog_network
+        working_dir: /app
+        command: python scripts/seed.py
+        restart: on-failure
+
+    api:
+        build: .
+        container_name: blog_api
+        ports:
+            - "8000:8000"
+        environment:
+            PYTHONPATH: /app
+            POSTGRES_HOST: postgres
+            POSTGRES_USER: blog_user
+            POSTGRES_PASSWORD: blog_pass
+            POSTGRES_DB: blog_db
+            REDIS_HOST: redis
+            REDIS_PORT: 6379
+        volumes:
+        - ./:/app
+        depends_on:
+            postgres:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+        networks:
+            - blog_network
+        command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+        restart: on-failure
+
+volumes:
+    postgres_data:
+    redis_data:
+
+networks:
+    blog_network:
+        driver: bridge
