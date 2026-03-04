@@ -45,7 +45,7 @@ API-приложение для управления постами.
 ## 1. Клонировать репозиторий
 
 ```bash
-git clone <https://github.com/mindrusher/paper_pls.git>
+git clone https://github.com/mindrusher/paper_pls.git
 cd paper_pls
 ```
 
