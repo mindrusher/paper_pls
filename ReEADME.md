@@ -59,10 +59,7 @@ docker-compose up --build
 
 http://localhost:8000/docs
 
-## 3. Все запросы требуют API-ключа в заголовке
-
-
-## 4. Остановка контейнеров
+## 3. Остановка контейнеров
 
 ```bash
 docker-compose down -v
